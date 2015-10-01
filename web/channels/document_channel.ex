@@ -54,4 +54,14 @@ defmodule Docs.DocumentChannel do
         {:reply, {:error, %{reasons: changeset}}, socket}
     end
   end
+
+  def handle_in("compute_img", params, socket) do
+    img_url = "http://www.placecage.com/c/460/300"
+    broadcast! socket, "insert_img", %{
+      start: params["start"],
+      end: params["end"],
+      url: img_url
+    }
+    {:reply, :ok, socket}
+  end
 end
