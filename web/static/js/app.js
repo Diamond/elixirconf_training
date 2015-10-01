@@ -34,7 +34,8 @@ socket.onOpen(() => console.log("Connected"));
 
 let App = {
   init() {
-    let docId =  $("#doc-form").data("id");
+    let docId = $("#doc-form").data("id");
+    if (!docId) { return; }
     let docChan = socket.channel("documents:" + docId);
     docChan.params["last_message_id"] = 0;
     let editor = new Quill("#editor");
