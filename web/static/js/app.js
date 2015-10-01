@@ -19,3 +19,32 @@ import "deps/phoenix_html/web/static/js/phoenix_html"
 // paths "./socket" or full ones "web/static/js/socket".
 
 // import socket from "./socket"
+import {Socket} from "deps/phoenix/web/static/js/phoenix"
+
+let socket = new Socket("/socket", {params: {token: window.userToken}});
+socket.connect();
+socket.onOpen(() => console.log("Connected"));
+
+let App = {
+  init() {
+    let docId =  $("#doc-form").data("id");
+    let docChan = socket.channel("documents:" + docId);
+    let editor = new Quill("#editor");
+
+    editor.on("text-change", (ops, source) => {
+      if (source != "user") { return }
+
+      docChan.push("text_change", { ops: ops });
+    });
+
+    docChan.on("text_change", ({ops}) => {
+      editor.updateContents(ops);
+    });
+
+    docChan.join()
+      .receive("ok", resp => console.log("Joined!", resp))
+      .receive("error", reason => console.log("Error!", reason));
+  }
+}
+
+App.init()
