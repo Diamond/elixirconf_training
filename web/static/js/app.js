@@ -36,9 +36,23 @@ let App = {
   init() {
     let docId =  $("#doc-form").data("id");
     let docChan = socket.channel("documents:" + docId);
+    docChan.params["last_message_id"] = 0;
     let editor = new Quill("#editor");
     let docForm = $("#doc-form");
     let saveTimer = null;
+    let msgContainer = $("#messages");
+    let msgInput = $("#message-input");
+
+    msgInput.on("keypress", e => {
+      if (e.which !== 13) { return; }
+
+      docChan.push("new_message", {body: msgInput.val()});
+      msgInput.val("");
+    });
+
+    docChan.on("new_message", msg => {
+      this.appendMessage(msg, msgContainer, docChan);
+    });
 
     editor.on("text-change", (ops, source) => {
       if (source != "user") { return }
@@ -60,8 +74,20 @@ let App = {
       this.save(docChan, editor);
     });
 
+    docChan.on("messages", ({messages}) => {
+      messages.reverse().forEach(msg => {
+        this.appendMessage(msg, msgContainer, docChan);
+      });
+    });
+
     docChan.join()
-      .receive("ok", resp => console.log("Joined!", resp))
+      .receive("ok", ({messages}) => {
+        //this.clearMessages(msgContainer);
+        /*messages.reverse().forEach(msg => {
+          this.appendMessage(msg, msgContainer, docChan);
+        });*/
+        console.log("Joined!");
+       })
       .receive("error", reason => console.log("Error!", reason));
   },
   save(docChan, editor) {
@@ -70,6 +96,16 @@ let App = {
     docChan.push("save", {body: body, title: title})
       .receive("ok", () => console.log("Saved!"))
       .receive("error", () => console.log("Error!"));
+  },
+  appendMessage(msg, msgContainer, docChan) {
+    if (docChan.params["last_message_id"] < msg.id) {
+      docChan.params["last_message_id"] = msg.id;
+    }
+    msgContainer.append(`<br/>${msg.body}`);
+    msgContainer.scrollTop(msgContainer.prop("scrollHeight"));
+  },
+  clearMessages(msgContainer) {
+    msgContainer.html("");
   }
 }
 
